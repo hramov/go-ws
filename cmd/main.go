@@ -14,18 +14,13 @@ import (
 const port = ":3000"
 
 type Client struct {
-	ID    string
-	Field battlefield.BattleField
-}
-
-type JsonClient struct {
-	ID    string
-	Field string
+	ID    string                  `json:"ID"`
+	Field battlefield.BattleField `json:"field"`
 }
 
 func main() {
 
-	// var clients []Client
+	var clients []Client
 
 	server := server.CreateServer()
 	defer server.Close()
@@ -34,26 +29,15 @@ func main() {
 
 	server.OnConnect("/", func(s socketio.Conn) error {
 		s.SetContext("")
-
-		field, _ := json.Marshal(b.CreateField())
-
-		client := JsonClient{s.ID(), string(field)}
-
-		data, err := json.Marshal(client)
-
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		fmt.Println(string(data))
+		client := Client{s.ID(), b.CreateField()}
+		data, _ := json.Marshal(client)
+		fmt.Println(data)
 		s.Emit("field", data)
-
-		// clients = append(clients, client)
+		clients = append(clients, client)
 		return nil
 	})
 
-	server.OnEvent("/", "notice", func(s socketio.Conn, msg string) {
-		fmt.Println("notice:", msg)
+	server.OnEvent("/", "shot", func(shot string) {
 		s.Emit("reply", "have "+msg)
 	})
 
