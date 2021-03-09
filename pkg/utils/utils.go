@@ -36,3 +36,9 @@ func Parser(x int) string {
 	}
 	return a
 }
+
+// func FindClientBySocket(s socketio.Conn, sockets *[]socketio.Conn) string {
+// 	for _, client := range *sockets {
+// 		if
+// 	}
+// }
