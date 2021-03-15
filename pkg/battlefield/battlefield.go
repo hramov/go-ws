@@ -3,6 +3,7 @@ package battlefield
 import (
 	"fmt"
 
+	socketio "github.com/googollee/go-socket.io"
 	"github.com/hramov/battleship_server/pkg/ship"
 )
 
@@ -13,6 +14,7 @@ const LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е 
 type Field [FIELD_WIDTH][FIELD_HEIGHT]string
 
 type Client struct {
+	Socket    socketio.Conn
 	ID        string
 	EnemyID   string
 	Field     Field
@@ -46,7 +48,6 @@ func (c *Client) CreateField(ID string) {
 
 func (c *Client) CheckShip(s ship.Ship) error {
 	errorMessage := "No errors!"
-
 	if c.Field[s.StartY][s.StartX] == "_" { //В начальной точке нет другого корабля
 		if s.Direction == 0 {
 			if s.StartY+s.Length < FIELD_HEIGHT { //Проверка выхода за границы поля
@@ -73,6 +74,33 @@ func (c *Client) CheckShip(s ship.Ship) error {
 		errorMessage = "Первое условие"
 	}
 	return fmt.Errorf("%s", errorMessage)
+}
+
+func (c *Client) CreateShip(s ship.Ship) error {
+	for i := 0; i < s.Length; i++ {
+		if s.Direction == 0 {
+			c.Field[s.StartY][s.StartX+i] = "O"
+			c.Field[s.StartY+1][s.StartX+i] = "*"
+			c.Field[s.StartY-1][s.StartX+i] = "*"
+			c.Field[s.StartY][s.StartX-1] = "*"
+			c.Field[s.StartY][s.StartX+s.Length] = "*"
+			c.Field[s.StartY+1][s.StartX+s.Length] = "*"
+			c.Field[s.StartY-1][s.StartX+s.Length] = "*"
+			c.Field[s.StartY+1][s.StartX-1] = "*"
+			c.Field[s.StartY-1][s.StartX-1] = "*"
+		} else if s.Direction == 1 {
+			c.Field[s.StartY+i][s.StartX] = "O"
+			c.Field[s.StartY+i][s.StartX+1] = "*"
+			c.Field[s.StartY+i][s.StartX-1] = "*"
+			c.Field[s.StartY-1][s.StartX] = "*"
+			c.Field[s.StartY+s.Length][s.StartX] = "*"
+			c.Field[s.StartY+s.Length][s.StartX+1] = "*"
+			c.Field[s.StartY+s.Length][s.StartX-1] = "*"
+			c.Field[s.StartY-1][s.StartX+1] = "*"
+			c.Field[s.StartY-1][s.StartX-1] = "*"
+		}
+	}
+	return nil
 }
 
 // func (b BattleField) DrawField() {
@@ -111,32 +139,6 @@ func (c *Client) CheckShip(s ship.Ship) error {
 // 		fmt.Println()
 // 	}
 // }
-
-func (c *Client) CreateShip(s ship.Ship) {
-	for i := 0; i < s.Length; i++ {
-		if s.Direction == 0 {
-			c.Field[s.StartY][s.StartX+i] = "O"
-			c.Field[s.StartY+1][s.StartX+i] = "*"
-			c.Field[s.StartY-1][s.StartX+i] = "*"
-			c.Field[s.StartY][s.StartX-1] = "*"
-			c.Field[s.StartY][s.StartX+s.Length] = "*"
-			c.Field[s.StartY+1][s.StartX+s.Length] = "*"
-			c.Field[s.StartY-1][s.StartX+s.Length] = "*"
-			c.Field[s.StartY+1][s.StartX-1] = "*"
-			c.Field[s.StartY-1][s.StartX-1] = "*"
-		} else if s.Direction == 1 {
-			c.Field[s.StartY+i][s.StartX] = "O"
-			c.Field[s.StartY+i][s.StartX+1] = "*"
-			c.Field[s.StartY+i][s.StartX-1] = "*"
-			c.Field[s.StartY-1][s.StartX] = "*"
-			c.Field[s.StartY+s.Length][s.StartX] = "*"
-			c.Field[s.StartY+s.Length][s.StartX+1] = "*"
-			c.Field[s.StartY+s.Length][s.StartX-1] = "*"
-			c.Field[s.StartY-1][s.StartX+1] = "*"
-			c.Field[s.StartY-1][s.StartX-1] = "*"
-		}
-	}
-}
 
 // func (b BattleField) DrawShot(Player bool, ShotX, ShotY int, Result int) BattleField {
 // 	if Player {

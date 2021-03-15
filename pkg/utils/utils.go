@@ -42,3 +42,24 @@ func Parser(x int) string {
 // 		if
 // 	}
 // }
+
+func Split(message string, delim string) (string, string) {
+	var breakPosition int = 0
+	var charArray []string
+	var eventString, dataString string
+	for i, char := range message {
+		charArray = append(charArray, string(char))
+		if string(char) == delim {
+			breakPosition = i
+		}
+	}
+	event := charArray[:breakPosition]
+	data := charArray[breakPosition+1:]
+	for i := 0; i < len(event); i++ {
+		eventString += string(event[i])
+	}
+	for i := 0; i < len(data); i++ {
+		dataString += string(data[i])
+	}
+	return eventString, dataString
+}
