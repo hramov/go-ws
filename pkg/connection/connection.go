@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	utils "github.com/hramov/battleship_server/pkg/utils"
+	"github.com/hramov/battleship_server/pkg/utils"
 )
 
 type Server struct {
@@ -19,22 +19,16 @@ type Client struct {
 	id          int
 	name        string
 	socket      net.Conn
-	transmitter chan Channel
-	receiver    chan Channel
+	transmitter chan string
+	receiver    chan string
 }
-
-type Event string
-type Data string
-
-type Channel map[Event]Data
-
-var clients []Client
 
 func Execute(protocol, ip, port string) {
 	server := Server{protocol, ip, port, nil}
 	server.createServer()
+	clients := make(map[int]Client)
 	for {
-		server.maintainConnections()
+		server.maintainConnections(clients)
 	}
 }
 
@@ -44,50 +38,61 @@ func (s *Server) createServer() {
 }
 
 func (s *Server) listen(client Client) {
-	eventMap := make(Channel)
 	rawData, _ := bufio.NewReader(client.socket).ReadString('\n')
-	event, data := utils.Split(rawData, ":")
-	eventMap[Event(event)] = Data(data)
-	client.receiver <- eventMap
+	client.receiver <- rawData
 }
 
 func (s *Server) on(client Client, rawEvent string, callback func(data string)) {
-	eventMap := <-client.receiver
-	for event, data := range eventMap {
-		if event == Event(rawEvent) {
-			callback(string(data))
-		}
+	rawData := <-client.receiver
+	event, data := utils.Split(rawData, ":")
+	if event == rawEvent {
+		callback(string(data))
 	}
 }
 
 func (s *Server) speak(client Client) {
-	eventMap := <-client.transmitter
-	for event, data := range eventMap {
-		client.socket.Write([]byte(string(event) + ":" + string(data) + "\n"))
-	}
+	rawData := <-client.transmitter
+	event, data := utils.Split(rawData, ":")
+	client.socket.Write([]byte(string(event) + ":" + string(data) + "\n"))
 }
 
 func (s *Server) emit(client Client, event string, data string) {
-	eventMap := make(Channel)
-	eventMap[Event(event)] = Data(data)
-	client.transmitter <- eventMap
+	rawData := event + ":" + data
+	client.transmitter <- rawData
 }
 
-func (s *Server) maintainConnections() {
+func (s *Server) maintainConnections(clients map[int]Client) {
 	conn, _ := s.ln.Accept()
 
-	client := Client{len(clients) + 1, "", conn, make(chan Channel), make(chan Channel)}
-	fmt.Println("New connection with ID =", client.id)
-	clients = append(clients, client)
+	id := len(clients) + 1
+	client := Client{id, "", conn, make(chan string), make(chan string)}
+	clients[id] = client
 
-	go s.listen(client)
-	go s.speak(client)
+	go func() {
+		go s.listen(client)
+		go s.speak(client)
+		rawData := "connect:" + string(client.id)
+		client.receiver <- rawData
+	}()
 
-	s.emit(client, "whoami", "")
+	go func() {
+		s.emit(client, "whoami", "")
 
-	s.on(client, "sendName", func(data string) {
-		client.name = data
-		fmt.Println(client.name)
-	})
+		s.on(client, "connect", func(data string) {
+			fmt.Println("Connect!")
+		})
+
+		s.on(client, "sendName", func(data string) {
+			client.name = data
+			fmt.Println(client.name)
+		})
+
+		s.on(client, "disconnect", func(data string) {
+			fmt.Println(client.name + " disconnected!")
+			close(client.receiver)
+			close(client.transmitter)
+			delete(clients, client.id)
+		})
+	}()
 
 }
