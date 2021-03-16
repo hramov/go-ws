@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/hramov/battleship_server/pkg/utils"
 )
@@ -52,14 +53,12 @@ func (s *Server) On(client Client, rawEvent string, callback func(data string)) 
 }
 
 func (s *Server) speak(client Client) {
-	rawData := <-client.Transmitter
-	event, data := utils.Split(rawData, ":")
+	event, data := utils.Split(<-client.Transmitter, ":")
 	client.Socket.Write([]byte(string(event) + ":" + string(data) + "\n"))
 }
 
 func (s *Server) Emit(client Client, event string, data string) {
-	rawData := event + ":" + data
-	client.Transmitter <- rawData
+	client.Transmitter <- event + ":" + data
 }
 
 func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Server, client Client, clients map[int]Client)) {
@@ -72,8 +71,7 @@ func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Ser
 	go func() {
 		go s.listen(client)
 		go s.speak(client)
-		rawData := "connect:" + string(client.ID)
-		client.Receiver <- rawData
+		client.Receiver <- "connect:" + strconv.Itoa(client.ID)
 	}()
 
 	go handler(s, client, clients)
