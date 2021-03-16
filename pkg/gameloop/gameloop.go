@@ -1,12 +1,24 @@
 package gameloop
 
+func Init() {
+	Start()
+	// Creating and drawing ships
+	// var ships []ship.Ship
+	// Player := true
+
+	// PlaceShips(Player, &ships, &b)
+	// PlaceShips(!Player, &ships, &b)
+
+	// Game(Player, &b, &ships)
+}
+
 func Start() {
-	//Creating and drawing battlefield
+	// Creating and drawing battlefield
 	// c := battlefield.Client{}
 	// c = c.CreateField()
 	// b.DrawField()
 
-	//Creating and drawing ships
+	// Creating and drawing ships
 	// var ships []ship.Ship
 	// Player := true
 

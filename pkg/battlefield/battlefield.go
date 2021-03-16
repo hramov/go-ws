@@ -2,8 +2,8 @@ package battlefield
 
 import (
 	"fmt"
+	"net"
 
-	socketio "github.com/googollee/go-socket.io"
 	"github.com/hramov/battleship_server/pkg/ship"
 )
 
@@ -14,36 +14,37 @@ const LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е 
 type Field [FIELD_WIDTH][FIELD_HEIGHT]string
 
 type Client struct {
-	Socket    socketio.Conn
-	ID        string
-	EnemyID   string
-	Field     Field
-	ShotField Field
+	ID          int
+	EnemyID     int
+	Name        string
+	Socket      net.Conn
+	Transmitter chan string
+	Receiver    chan string
+	Field       Field
+	ShotField   Field
 }
 
-type BattleField struct {
-	Field     Field `json:"Field"`
-	ShotField Field `json:"ShotField"`
-}
+func CreateField(ID int) (Field, Field) {
+	var field Field
+	var shotField Field
 
-func (c *Client) CreateField(ID string) {
-	c.ID = ID
 	for i := 0; i < FIELD_HEIGHT; i++ {
 		for j := 0; j < FIELD_WIDTH; j++ {
 			if i == 0 || i == FIELD_HEIGHT-1 {
-				c.Field[i][j] = "*"
-				c.ShotField[i][j] = "*"
+				field[i][j] = "*"
+				shotField[i][j] = "*"
 				continue
 			}
 			if j == 0 || j == FIELD_WIDTH-1 {
-				c.Field[i][j] = "*"
-				c.ShotField[i][j] = "*"
+				field[i][j] = "*"
+				shotField[i][j] = "*"
 			} else {
-				c.Field[i][j] = "_"
-				c.ShotField[i][j] = "_"
+				field[i][j] = "_"
+				shotField[i][j] = "_"
 			}
 		}
 	}
+	return field, shotField
 }
 
 func (c *Client) CheckShip(s ship.Ship) error {
