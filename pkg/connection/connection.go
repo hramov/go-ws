@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 
 	"github.com/hramov/battleship_server/pkg/utils"
 )
@@ -17,21 +18,19 @@ type Server struct {
 }
 
 type Client struct {
-	ID          int
-	EnemyID     int
-	Name        string
-	Socket      net.Conn
-	Transmitter chan string
-	Receiver    chan string
+	ID      int
+	EnemyID int
+	Name    string
+	Socket  net.Conn
+	From    chan string
+	To      chan string
 }
 
 func Execute(protocol, ip, port string, handler func(s *Server, client Client, clients map[int]Client)) {
 	server := Server{protocol, ip, port, nil}
 	server.createServer()
 	clients := make(map[int]Client)
-	for {
-		server.maintainConnections(clients, handler)
-	}
+	server.maintainConnections(clients, handler)
 }
 
 func (s *Server) createServer() {
@@ -41,11 +40,11 @@ func (s *Server) createServer() {
 
 func (s *Server) listen(client Client) {
 	rawData, _ := bufio.NewReader(client.Socket).ReadString('\n')
-	client.Receiver <- rawData
+	client.From <- rawData
 }
 
 func (s *Server) On(client Client, rawEvent string, callback func(data string)) {
-	rawData := <-client.Receiver
+	rawData := <-client.From
 	event, data := utils.Split(rawData, ":")
 	if event == rawEvent {
 		callback(string(data))
@@ -53,27 +52,31 @@ func (s *Server) On(client Client, rawEvent string, callback func(data string)) 
 }
 
 func (s *Server) speak(client Client) {
-	event, data := utils.Split(<-client.Transmitter, ":")
+	<-client.To
+	rawData := <-client.To
+	event, data := utils.Split(rawData, ":")
+	utils.Log(event)
 	client.Socket.Write([]byte(string(event) + ":" + string(data) + "\n"))
 }
 
 func (s *Server) Emit(client Client, event string, data string) {
-	client.Transmitter <- event + ":" + data
+	client.To <- string(event + ":" + data)
 }
 
 func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Server, client Client, clients map[int]Client)) {
 	conn, _ := s.ln.Accept()
 
 	ID := len(clients) + 1
-	client := Client{ID, 0, "", conn, make(chan string), make(chan string)}
+	client := Client{ID, 0, "", conn, make(chan string, 10), make(chan string, 10)}
 	clients[ID] = client
 
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 	go func() {
 		go s.listen(client)
 		go s.speak(client)
-		client.Receiver <- "connect:" + strconv.Itoa(client.ID)
+		client.From <- "connect:" + strconv.Itoa(client.ID)
 	}()
-
 	go handler(s, client, clients)
-
+	wg.Wait()
 }

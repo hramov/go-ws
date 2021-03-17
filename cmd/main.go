@@ -16,10 +16,8 @@ func main() {
 			/** Обрабатываем событие подключения */
 			s.On(client, "connect", func(data string) {
 				s.Emit(client, "connect", "")
+				s.Emit(client, "whoami", "")
 			})
-
-			/** Узнаем имя игрока */
-			s.Emit(client, "whoami", "")
 
 			s.On(client, "sendName", func(data string) {
 				client.Name = data
@@ -38,10 +36,11 @@ func main() {
 			/** Обрабатываем событие отключения */
 			s.On(client, "disconnect", func(data string) {
 				fmt.Println(client.Name + " disconnected!")
-				close(client.Receiver)
-				close(client.Transmitter)
+				close(client.From)
+				close(client.To)
 				delete(clients, client.ID)
 			})
 		}) // Запуск сокет-сервера
+
 	// gameloop.Init()
 }

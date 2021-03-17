@@ -1,5 +1,10 @@
 package utils
 
+import (
+	"fmt"
+	"time"
+)
+
 func Parser(x int) string {
 	var a string
 	switch x {
@@ -37,12 +42,6 @@ func Parser(x int) string {
 	return a
 }
 
-// func FindClientBySocket(s socketio.Conn, sockets *[]socketio.Conn) string {
-// 	for _, client := range *sockets {
-// 		if
-// 	}
-// }
-
 func Split(message string, delim string) (string, string) {
 	var breakPosition int = 0
 	var charArray []string
@@ -62,4 +61,9 @@ func Split(message string, delim string) (string, string) {
 		dataString += string(data[i])
 	}
 	return eventString, dataString
+}
+
+func Log(message string) {
+	data := time.Now().Format("02-01-2006 15:04:05")
+	fmt.Printf("%s | %s\n", data, message)
 }
