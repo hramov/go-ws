@@ -13,33 +13,34 @@ func main() {
 	connection.Execute("tcp", "127.0.0.1", "5000",
 		func(s *connection.Server, client connection.Client, clients map[int]connection.Client) {
 
-			/** Обрабатываем событие подключения */
-			s.On(client, "connect", func(data string) {
-				s.Emit(client, "connect", "")
-				s.Emit(client, "whoami", "")
-			})
+			for {
+				/** Обрабатываем событие подключения */
+				s.On(client, "connect", func(data string) {
+					s.Emit(client, "connect", "")
+					s.Emit(client, "whoami", "")
+				})
 
-			s.On(client, "sendName", func(data string) {
-				client.Name = data
+				s.On(client, "sendName", func(data string) {
+					s.Emit(client, "enemy", "2")
+					client.Name = data
+					/** Создаем и отправляем поле */
+					b := battlefield.BattleField{}
+					b.CreateField(client.ID, 2)
+					jsonData, err := json.Marshal(b)
+					if err != nil {
+						log.Fatal(err)
+					}
+					s.Emit(client, "drawField", string(jsonData))
+				})
 
-				/** Создаем и отправляем поле */
-				b := battlefield.BattleField{}
-				b.CreateField(client.ID)
-				jsonData, err := json.Marshal(b)
-				if err != nil {
-					log.Fatal(err)
-				}
-				fmt.Println(string(jsonData))
-				s.Emit(client, "drawField", string(jsonData))
-			})
-
-			/** Обрабатываем событие отключения */
-			s.On(client, "disconnect", func(data string) {
-				fmt.Println(client.Name + " disconnected!")
-				close(client.From)
-				close(client.To)
-				delete(clients, client.ID)
-			})
+				/** Обрабатываем событие отключения */
+				s.On(client, "disconnect", func(data string) {
+					fmt.Println(client.Name + " disconnected!")
+					close(client.From)
+					close(client.To)
+					delete(clients, client.ID)
+				})
+			}
 		}) // Запуск сокет-сервера
 
 	// gameloop.Init()

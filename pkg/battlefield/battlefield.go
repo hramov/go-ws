@@ -8,12 +8,14 @@ type Field [FIELD_WIDTH][FIELD_HEIGHT]string
 
 type BattleField struct {
 	ID        int
+	EnemyID   int
 	Field     Field
 	ShotField Field
 }
 
-func (b *BattleField) CreateField(ID int) BattleField {
+func (b *BattleField) CreateField(ID int, EnemyID int) BattleField {
 	b.ID = ID
+	b.EnemyID = EnemyID
 	for i := 0; i < FIELD_HEIGHT; i++ {
 		for j := 0; j < FIELD_WIDTH; j++ {
 			if i == 0 || i == FIELD_HEIGHT-1 {

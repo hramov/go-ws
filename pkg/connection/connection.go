@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync"
 
 	"github.com/hramov/battleship_server/pkg/utils"
 )
@@ -39,28 +38,31 @@ func (s *Server) createServer() {
 }
 
 func (s *Server) listen(client Client) {
-	rawData, _ := bufio.NewReader(client.Socket).ReadString('\n')
-	client.From <- rawData
+	for {
+		rawData, _ := bufio.NewReader(client.Socket).ReadString('\n')
+		client.From <- rawData
+	}
 }
 
 func (s *Server) On(client Client, rawEvent string, callback func(data string)) {
 	rawData := <-client.From
-	event, data := utils.Split(rawData, ":")
+	event, data := utils.Split(rawData, "|")
+	// fmt.Print()
 	if event == rawEvent {
 		callback(string(data))
 	}
 }
 
 func (s *Server) speak(client Client) {
-	<-client.To
-	rawData := <-client.To
-	event, data := utils.Split(rawData, ":")
-	utils.Log(event)
-	client.Socket.Write([]byte(string(event) + ":" + string(data) + "\n"))
+	for {
+		rawData := <-client.To
+		event, data := utils.Split(rawData, "|")
+		client.Socket.Write([]byte(string(event) + "|" + string(data) + "\n"))
+	}
 }
 
 func (s *Server) Emit(client Client, event string, data string) {
-	client.To <- string(event + ":" + data)
+	client.To <- string(event + "|" + data)
 }
 
 func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Server, client Client, clients map[int]Client)) {
@@ -70,13 +72,9 @@ func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Ser
 	client := Client{ID, 0, "", conn, make(chan string, 10), make(chan string, 10)}
 	clients[ID] = client
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		go s.listen(client)
-		go s.speak(client)
-		client.From <- "connect:" + strconv.Itoa(client.ID)
-	}()
+	go s.speak(client)
 	go handler(s, client, clients)
-	wg.Wait()
+
+	client.From <- "connect|" + strconv.Itoa(client.ID)
+	s.listen(client)
 }
