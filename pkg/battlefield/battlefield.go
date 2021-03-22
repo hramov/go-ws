@@ -1,5 +1,11 @@
 package battlefield
 
+import (
+	"fmt"
+
+	"github.com/hramov/battleship_server/pkg/ship"
+)
+
 const FIELD_WIDTH = 12
 const FIELD_HEIGHT = 12
 const LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е Ж З И К\n"
@@ -36,35 +42,35 @@ func (b *BattleField) CreateField(ID int, EnemyID int) BattleField {
 	return *b
 }
 
-// func (c *Client) CheckShip(s ship.Ship) error {
-// 	errorMessage := "No errors!"
-// 	if c.Field[s.StartY][s.StartX] == "_" { //В начальной точке нет другого корабля
-// 		if s.Direction == 0 {
-// 			if s.StartY+s.Length < FIELD_HEIGHT { //Проверка выхода за границы поля
-// 				if c.Field[s.StartY+s.Length][s.StartX] != "_" { //Проверка доступности клетки в конечной точке
-// 					errorMessage = "Уперся в *"
-// 				} else {
-// 					return nil
-// 				}
-// 			} else {
-// 				errorMessage = "Вышел за границу"
-// 			}
-// 		} else {
-// 			if s.StartX+s.Length < FIELD_WIDTH {
-// 				if c.Field[s.StartY][s.StartX+s.Length] != "_" {
-// 					errorMessage = "Уперся в *"
-// 				} else {
-// 					return nil
-// 				}
-// 			} else {
-// 				errorMessage = "Вышел за границу"
-// 			}
-// 		}
-// 	} else {
-// 		errorMessage = "Первое условие"
-// 	}
-// 	return fmt.Errorf("%s", errorMessage)
-// }
+func (b *BattleField) CheckShip(s ship.Ship) error {
+	errorMessage := ""
+	if b.Field[s.StartY][s.StartX] == "_" { //В начальной точке нет другого корабля
+		if s.Direction == 0 {
+			if s.StartY+s.Length < FIELD_HEIGHT { //Проверка выхода за границы поля
+				if b.Field[s.StartY+s.Length][s.StartX] != "_" { //Проверка доступности клетки в конечной точке
+					errorMessage = "Уперся в *"
+				} else {
+					return nil
+				}
+			} else {
+				errorMessage = "Вышел за границу"
+			}
+		} else {
+			if s.StartX+s.Length < FIELD_WIDTH {
+				if b.Field[s.StartY][s.StartX+s.Length] != "_" {
+					errorMessage = "Уперся в *"
+				} else {
+					return nil
+				}
+			} else {
+				errorMessage = "Вышел за границу"
+			}
+		}
+	} else {
+		errorMessage = "Первое условие"
+	}
+	return fmt.Errorf("%s", errorMessage)
+}
 
 // func (c *Client) CreateShip(s ship.Ship) error {
 // 	for i := 0; i < s.Length; i++ {
