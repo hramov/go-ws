@@ -29,7 +29,9 @@ func Execute(protocol, ip, port string, handler func(s *Server, client Client, c
 	server := Server{protocol, ip, port, nil}
 	server.createServer()
 	clients := make(map[int]Client)
-	server.maintainConnections(clients, handler)
+	for {
+		server.maintainConnections(clients, handler)
+	}
 }
 
 func (s *Server) createServer() {
@@ -47,7 +49,6 @@ func (s *Server) listen(client Client) {
 func (s *Server) On(client Client, rawEvent string, callback func(data string)) {
 	rawData := <-client.From
 	event, data := utils.Split(rawData, "|")
-	// fmt.Print()
 	if event == rawEvent {
 		callback(string(data))
 	}
@@ -66,15 +67,17 @@ func (s *Server) Emit(client Client, event string, data string) {
 }
 
 func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Server, client Client, clients map[int]Client)) {
-	conn, _ := s.ln.Accept()
+	for {
+		conn, _ := s.ln.Accept()
+		fmt.Println("New connection")
+		ID := len(clients) + 1
+		client := Client{ID, 0, "", conn, make(chan string, 10), make(chan string, 10)}
+		clients[ID] = client
 
-	ID := len(clients) + 1
-	client := Client{ID, 0, "", conn, make(chan string, 10), make(chan string, 10)}
-	clients[ID] = client
+		go s.speak(client)
+		go handler(s, client, clients)
+		go s.listen(client)
 
-	go s.speak(client)
-	go handler(s, client, clients)
-
-	client.From <- "connect|" + strconv.Itoa(client.ID)
-	s.listen(client)
+		client.From <- "connect|" + strconv.Itoa(client.ID)
+	}
 }
