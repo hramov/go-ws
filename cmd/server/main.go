@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/hramov/battleship_server/pkg/battlefield"
 	connection "github.com/hramov/battleship_server/pkg/connection"
@@ -28,13 +27,8 @@ func main() {
 				s.On(client, "sendName", func(data string) {
 					s.Emit(client, "enemy", "2")
 					client.Name = data
-					/** Создаем и отправляем поле */
-					b.CreateField(client.ID, 2)
-					jsonData, err := json.Marshal(b)
-					if err != nil {
-						log.Fatal(err)
-					}
-					s.Emit(client, "drawField", string(jsonData))
+
+					s.Emit(client, "drawField", "")
 					s.Emit(client, "placeShip", "")
 				})
 
@@ -45,6 +39,7 @@ func main() {
 						s.Emit(client, "wrongShip", fmt.Sprint(err))
 						s.Emit(client, "placeShip", "")
 					} else {
+						fmt.Println(sh)
 						ships = append(ships, sh)
 						if len(ships) < 10 {
 							s.Emit(client, "placeShip", "")

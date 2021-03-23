@@ -19,28 +19,28 @@ type BattleField struct {
 	ShotField Field
 }
 
-func (b *BattleField) CreateField(ID int, EnemyID int) BattleField {
-	b.ID = ID
-	b.EnemyID = EnemyID
-	for i := 0; i < FIELD_HEIGHT; i++ {
-		for j := 0; j < FIELD_WIDTH; j++ {
-			if i == 0 || i == FIELD_HEIGHT-1 {
-				b.Field[i][j] = "*"
-				b.ShotField[i][j] = "*"
-				continue
-			}
-			if j == 0 || j == FIELD_WIDTH-1 {
-				b.Field[i][j] = "*"
-				b.ShotField[i][j] = "*"
-			} else {
-				b.Field[i][j] = "_"
-				b.ShotField[i][j] = "_"
-			}
-		}
-	}
+// func (b *BattleField) CreateField(ID int, EnemyID int) BattleField {
+// 	b.ID = ID
+// 	b.EnemyID = EnemyID
+// 	for i := 0; i < FIELD_HEIGHT; i++ {
+// 		for j := 0; j < FIELD_WIDTH; j++ {
+// 			if i == 0 || i == FIELD_HEIGHT-1 {
+// 				b.Field[i][j] = "*"
+// 				b.ShotField[i][j] = "*"
+// 				continue
+// 			}
+// 			if j == 0 || j == FIELD_WIDTH-1 {
+// 				b.Field[i][j] = "*"
+// 				b.ShotField[i][j] = "*"
+// 			} else {
+// 				b.Field[i][j] = "_"
+// 				b.ShotField[i][j] = "_"
+// 			}
+// 		}
+// 	}
 
-	return *b
-}
+// 	return *b
+// }
 
 func (b *BattleField) CheckShip(s ship.Ship) error {
 	errorMessage := ""
@@ -97,43 +97,6 @@ func (b *BattleField) CheckShip(s ship.Ship) error {
 // 		}
 // 	}
 // 	return nil
-// }
-
-// func (b BattleField) DrawField() {
-
-// 	fmt.Printf(LETTER_STRING)
-// 	for i := 1; i < FIELD_HEIGHT-1; i++ {
-
-// 		//My field drawing
-// 		if i != FIELD_HEIGHT-2 {
-// 			fmt.Printf(" %d", i)
-// 		} else {
-// 			fmt.Printf("%d", i)
-// 		}
-// 		for j := 1; j < FIELD_WIDTH-1; j++ {
-// 			if j != FIELD_WIDTH-2 {
-// 				fmt.Printf("|%s", b.MyField[i][j])
-// 			} else {
-// 				fmt.Printf("|%s|", b.MyField[i][j])
-// 			}
-// 		}
-// 		fmt.Printf("\t\t")
-
-// 		//Enemy field drawing
-// 		if i != FIELD_WIDTH-2 {
-// 			fmt.Printf(" %d", i)
-// 		} else {
-// 			fmt.Printf("%d", i)
-// 		}
-// 		for j := 1; j < FIELD_HEIGHT-1; j++ {
-// 			if j != FIELD_HEIGHT-2 {
-// 				fmt.Printf("|%s", b.EnemyField[i][j])
-// 			} else {
-// 				fmt.Printf("|%s|", b.EnemyField[i][j])
-// 			}
-// 		}
-// 		fmt.Println()
-// 	}
 // }
 
 // func (b BattleField) DrawShot(Player bool, ShotX, ShotY int, Result int) BattleField {

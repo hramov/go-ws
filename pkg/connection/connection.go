@@ -29,9 +29,7 @@ func Execute(protocol, ip, port string, handler func(s *Server, client Client, c
 	server := Server{protocol, ip, port, nil}
 	server.createServer()
 	clients := make(map[int]Client)
-	for {
-		server.maintainConnections(clients, handler)
-	}
+	server.maintainConnections(clients, handler)
 }
 
 func (s *Server) createServer() {
@@ -56,9 +54,16 @@ func (s *Server) On(client Client, rawEvent string, callback func(data string)) 
 
 func (s *Server) speak(client Client) {
 	for {
-		rawData := <-client.To
-		event, data := utils.Split(rawData, "|")
-		client.Socket.Write([]byte(string(event) + "|" + string(data) + "\n"))
+		select {
+		case rawData := <-client.To:
+			{
+				event, data := utils.Split(rawData, "|")
+				client.Socket.Write([]byte(string(event) + "|" + string(data) + "\n"))
+			}
+		}
+		// rawData := <-client.To
+		// event, data := utils.Split(rawData, "|")
+		// client.Socket.Write([]byte(string(event) + "|" + string(data) + "\n"))
 	}
 }
 
@@ -70,6 +75,7 @@ func (s *Server) maintainConnections(clients map[int]Client, handler func(s *Ser
 	for {
 		conn, _ := s.ln.Accept()
 		fmt.Println("New connection")
+
 		ID := len(clients) + 1
 		client := Client{ID, 0, "", conn, make(chan string, 10), make(chan string, 10)}
 		clients[ID] = client
