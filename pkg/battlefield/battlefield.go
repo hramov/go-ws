@@ -13,37 +13,32 @@ const LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е 
 type Field [FIELD_WIDTH][FIELD_HEIGHT]string
 
 type BattleField struct {
-	ID        int
-	EnemyID   int
 	Field     Field
 	ShotField Field
 }
 
-// func (b *BattleField) CreateField(ID int, EnemyID int) BattleField {
-// 	b.ID = ID
-// 	b.EnemyID = EnemyID
-// 	for i := 0; i < FIELD_HEIGHT; i++ {
-// 		for j := 0; j < FIELD_WIDTH; j++ {
-// 			if i == 0 || i == FIELD_HEIGHT-1 {
-// 				b.Field[i][j] = "*"
-// 				b.ShotField[i][j] = "*"
-// 				continue
-// 			}
-// 			if j == 0 || j == FIELD_WIDTH-1 {
-// 				b.Field[i][j] = "*"
-// 				b.ShotField[i][j] = "*"
-// 			} else {
-// 				b.Field[i][j] = "_"
-// 				b.ShotField[i][j] = "_"
-// 			}
-// 		}
-// 	}
-
-// 	return *b
-// }
+func (b *BattleField) CreateField() {
+	for i := 0; i < FIELD_HEIGHT; i++ {
+		for j := 0; j < FIELD_WIDTH; j++ {
+			if i == 0 || i == FIELD_HEIGHT-1 {
+				b.Field[i][j] = "*"
+				b.ShotField[i][j] = "*"
+				continue
+			}
+			if j == 0 || j == FIELD_WIDTH-1 {
+				b.Field[i][j] = "*"
+				b.ShotField[i][j] = "*"
+			} else {
+				b.Field[i][j] = "_"
+				b.ShotField[i][j] = "_"
+			}
+		}
+	}
+}
 
 func (b *BattleField) CheckShip(s ship.Ship) error {
 	errorMessage := ""
+
 	if b.Field[s.StartY][s.StartX] == "_" { //В начальной точке нет другого корабля
 		if s.Direction == 0 {
 			if s.StartY+s.Length < FIELD_HEIGHT { //Проверка выхода за границы поля
@@ -69,35 +64,35 @@ func (b *BattleField) CheckShip(s ship.Ship) error {
 	} else {
 		errorMessage = "Первое условие"
 	}
-	return fmt.Errorf("%s", errorMessage)
+	return fmt.Errorf("%s\n", errorMessage)
 }
 
-// func (c *Client) CreateShip(s ship.Ship) error {
-// 	for i := 0; i < s.Length; i++ {
-// 		if s.Direction == 0 {
-// 			c.Field[s.StartY][s.StartX+i] = "O"
-// 			c.Field[s.StartY+1][s.StartX+i] = "*"
-// 			c.Field[s.StartY-1][s.StartX+i] = "*"
-// 			c.Field[s.StartY][s.StartX-1] = "*"
-// 			c.Field[s.StartY][s.StartX+s.Length] = "*"
-// 			c.Field[s.StartY+1][s.StartX+s.Length] = "*"
-// 			c.Field[s.StartY-1][s.StartX+s.Length] = "*"
-// 			c.Field[s.StartY+1][s.StartX-1] = "*"
-// 			c.Field[s.StartY-1][s.StartX-1] = "*"
-// 		} else if s.Direction == 1 {
-// 			c.Field[s.StartY+i][s.StartX] = "O"
-// 			c.Field[s.StartY+i][s.StartX+1] = "*"
-// 			c.Field[s.StartY+i][s.StartX-1] = "*"
-// 			c.Field[s.StartY-1][s.StartX] = "*"
-// 			c.Field[s.StartY+s.Length][s.StartX] = "*"
-// 			c.Field[s.StartY+s.Length][s.StartX+1] = "*"
-// 			c.Field[s.StartY+s.Length][s.StartX-1] = "*"
-// 			c.Field[s.StartY-1][s.StartX+1] = "*"
-// 			c.Field[s.StartY-1][s.StartX-1] = "*"
-// 		}
-// 	}
-// 	return nil
-// }
+func (b *BattleField) CreateShip(s ship.Ship) error {
+	for i := 0; i < s.Length; i++ {
+		if s.Direction == 0 {
+			b.Field[s.StartY][s.StartX+i] = "O"
+			b.Field[s.StartY+1][s.StartX+i] = "*"
+			b.Field[s.StartY-1][s.StartX+i] = "*"
+			b.Field[s.StartY][s.StartX-1] = "*"
+			b.Field[s.StartY][s.StartX+s.Length] = "*"
+			b.Field[s.StartY+1][s.StartX+s.Length] = "*"
+			b.Field[s.StartY-1][s.StartX+s.Length] = "*"
+			b.Field[s.StartY+1][s.StartX-1] = "*"
+			b.Field[s.StartY-1][s.StartX-1] = "*"
+		} else if s.Direction == 1 {
+			b.Field[s.StartY+i][s.StartX] = "O"
+			b.Field[s.StartY+i][s.StartX+1] = "*"
+			b.Field[s.StartY+i][s.StartX-1] = "*"
+			b.Field[s.StartY-1][s.StartX] = "*"
+			b.Field[s.StartY+s.Length][s.StartX] = "*"
+			b.Field[s.StartY+s.Length][s.StartX+1] = "*"
+			b.Field[s.StartY+s.Length][s.StartX-1] = "*"
+			b.Field[s.StartY-1][s.StartX+1] = "*"
+			b.Field[s.StartY-1][s.StartX-1] = "*"
+		}
+	}
+	return nil
+}
 
 // func (b BattleField) DrawShot(Player bool, ShotX, ShotY int, Result int) BattleField {
 // 	if Player {

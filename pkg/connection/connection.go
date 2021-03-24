@@ -52,7 +52,7 @@ func (s *Server) Listen(client Client) {
 
 func (s *Server) On(client Client, handlers *map[string]func(client Client, data string)) {
 	for {
-		time.Sleep(time.Second / 1000)
+		time.Sleep(time.Second / 100)
 		rawData := <-client.From
 		rawEvent, data := utils.Split(rawData, "|")
 		for event, handler := range *handlers {
@@ -72,6 +72,6 @@ func (s *Server) Speak(client Client) {
 }
 
 func (s *Server) Emit(client Client, event, data string) {
-	time.Sleep(time.Second / 1000)
+	time.Sleep(time.Second / 100)
 	client.To <- string(event + "|" + data)
 }
