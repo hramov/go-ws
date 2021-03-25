@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hramov/battleship_server/pkg/ship"
+	"github.com/hramov/battleship_server/pkg/shot"
 )
 
 const (
@@ -41,14 +42,11 @@ func (b *BattleField) CreateField() {
 	}
 }
 
-func (b *BattleField) CheckShip(id int, s ship.Ship, ships *[]ship.Ship) error {
+func (b *BattleField) CheckShip(s ship.Ship, ships *map[int]ship.Ship) error {
 	errorMessage := ""
 
-	//Выборка кораблей определенного игрока
-	playerShips := GetShipsByID(id, ships)
-
 	//Проверка на количество кораблей определенной длины
-	if err := CheckQuantity(s, &playerShips); err != nil {
+	if err := CheckQuantity(s, ships); err != nil {
 		return fmt.Errorf("%s\n", err)
 	}
 
@@ -108,7 +106,7 @@ func (b *BattleField) CreateShip(s ship.Ship) error {
 	return nil
 }
 
-func CheckQuantity(s ship.Ship, ships *[]ship.Ship) error {
+func CheckQuantity(s ship.Ship, ships *map[int]ship.Ship) error {
 	count := [4]int{4, 3, 2, 1}
 	for _, sh := range *ships {
 		switch sh.Length {
@@ -167,19 +165,12 @@ func GetShipsByID(id int, ships *[]ship.Ship) []ship.Ship {
 // 	b.DrawField()
 // }
 
-// func (b BattleField) CheckShot(Player bool, shot ship.Shot) error {
-
-// 	if Player {
-// 		if b.EnemyField[shot.X][shot.Y] == "O" || b.EnemyField[shot.X][shot.Y] == "*" {
-// 			return nil
-// 		}
-// 	} else {
-// 		if b.MyField[shot.X][shot.Y] == "O" || b.MyField[shot.X][shot.Y] == "*" {
-// 			return nil
-// 		}
-// 	}
-// 	return fmt.Errorf("%s", "Сюда нельзя стрелять")
-// }
+func (b *BattleField) CheckShot(newShot *shot.Shot) error {
+	if b.Field[newShot.X][newShot.Y] == "O" || b.Field[newShot.X][newShot.Y] == "*" {
+		return nil
+	}
+	return fmt.Errorf("%s", "Сюда нельзя стрелять")
+}
 
 // func (b BattleField) CheckHit(Player bool, shot ship.Shot, ships *[]ship.Ship) bool {
 
