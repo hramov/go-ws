@@ -6,9 +6,14 @@ import (
 	"github.com/hramov/battleship_server/pkg/ship"
 )
 
-const FIELD_WIDTH = 12
-const FIELD_HEIGHT = 12
-const LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е Ж З И К\n"
+const (
+	FIELD_WIDTH   = 12
+	FIELD_HEIGHT  = 12
+	LETTER_STRING = "   А Б В Г Д Е Ж З И К\t\t   А Б В Г Д Е Ж З И К\n"
+
+	XDirection = 0
+	YDirection = 1
+)
 
 type Field [FIELD_WIDTH][FIELD_HEIGHT]string
 
@@ -36,35 +41,44 @@ func (b *BattleField) CreateField() {
 	}
 }
 
-func (b *BattleField) CheckShip(s ship.Ship) error {
+func (b *BattleField) CheckShip(id int, s ship.Ship, ships *[]ship.Ship) error {
 	errorMessage := ""
 
+	//Выборка кораблей определенного игрока
+	playerShips := GetShipsByID(id, ships)
+
+	//Проверка на количество кораблей определенной длины
+	if err := CheckQuantity(s, &playerShips); err != nil {
+		return fmt.Errorf("%s\n", err)
+	}
+
+	//Проверка на корректность расположения
 	if b.Field[s.StartY][s.StartX] == "_" { //В начальной точке нет другого корабля
-		if s.Direction == 0 {
-			if s.StartY+s.Length < FIELD_HEIGHT { //Проверка выхода за границы поля
-				if b.Field[s.StartY+s.Length][s.StartX] != "_" { //Проверка доступности клетки в конечной точке
-					errorMessage = "Уперся в *"
+		if s.Direction == YDirection {
+			if s.StartY+s.Length-1 < FIELD_HEIGHT { //Проверка выхода за границы поля
+				if b.Field[s.StartY+s.Length-1][s.StartX] != "_" { //Проверка доступности клетки в конечной точке
+					errorMessage = "Неверное расположение корабля"
 				} else {
 					return nil
 				}
 			} else {
-				errorMessage = "Вышел за границу"
+				errorMessage = "Вышел за границу поля"
 			}
-		} else {
-			if s.StartX+s.Length < FIELD_WIDTH {
-				if b.Field[s.StartY][s.StartX+s.Length] != "_" {
-					errorMessage = "Уперся в *"
+		} else if s.Direction == XDirection {
+			if s.StartX+s.Length-1 < FIELD_WIDTH {
+				if b.Field[s.StartY][s.StartX+s.Length-1] != "_" {
+					errorMessage = "Неверное расположение корабля"
 				} else {
 					return nil
 				}
 			} else {
-				errorMessage = "Вышел за границу"
+				errorMessage = "Вышел за границу поля"
 			}
 		}
 	} else {
-		errorMessage = "Первое условие"
+		errorMessage = "Неверно выбрана начальная точка"
 	}
-	return fmt.Errorf("%s\n", errorMessage)
+	return fmt.Errorf("%s", errorMessage)
 }
 
 func (b *BattleField) CreateShip(s ship.Ship) error {
@@ -92,6 +106,41 @@ func (b *BattleField) CreateShip(s ship.Ship) error {
 		}
 	}
 	return nil
+}
+
+func CheckQuantity(s ship.Ship, ships *[]ship.Ship) error {
+	count := [4]int{4, 3, 2, 1}
+	for _, sh := range *ships {
+		switch sh.Length {
+		case 1:
+			count[0]--
+			break
+		case 2:
+			count[1]--
+			break
+		case 3:
+			count[2]--
+			break
+		case 4:
+			count[3]--
+			break
+		}
+	}
+	if count[s.Length-1] == 0 {
+		return fmt.Errorf("%s %d\n", "Слишком много кораблей с длиной", s.Length)
+	}
+	return nil
+}
+
+func GetShipsByID(id int, ships *[]ship.Ship) []ship.Ship {
+	var playerShips []ship.Ship
+
+	for _, sh := range *ships {
+		if sh.Player == id {
+			playerShips = append(playerShips, sh)
+		}
+	}
+	return playerShips
 }
 
 // func (b BattleField) DrawShot(Player bool, ShotX, ShotY int, Result int) BattleField {

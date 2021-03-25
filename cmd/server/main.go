@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"math/rand"
 	"strconv"
+	"time"
 
 	"github.com/hramov/battleship_server/pkg/battlefield"
 	connection "github.com/hramov/battleship_server/pkg/connection"
@@ -34,28 +36,30 @@ func main() {
 
 	handlers["sendShip"] = func(client connection.Client, data string) {
 		sh := ship.Ship{}
+		sh.Player = client.ID
 		json.Unmarshal([]byte(data), &sh)
 		b := FindFieldByClientID(client.ID)
-		err := b.CheckShip(sh)
+		err := b.CheckShip(client.ID, sh, &ships)
 		if err != nil {
 			s.Emit(client, "wrongShip", err.Error())
 			s.Emit(client, "placeShip", err.Error())
 		} else {
-			s.Emit(client, "rightShip", "Ваш корабль успешно добавлен!")
 			b.CreateShip(sh)
 			battlefields[client.ID] = b
 			ships = append(ships, sh)
-
+			s.Emit(client, "rightShip", "Ваш корабль успешно добавлен! Осталось: "+strconv.Itoa(10-len(ships)))
 			shipData, _ := json.Marshal(b)
-
 			s.Emit(client, "drawField", string(shipData))
-
 			if len(ships) < 10 {
 				s.Emit(client, "placeShip", "")
 			} else {
-				s.Emit(client, "hit", "")
+				s.Emit(client, "startGame", strconv.Itoa(Roll(client.ID, client.EnemyID)))
 			}
 		}
+	}
+
+	handlers["shot"] = func(client connection.Client, data string) {
+
 	}
 
 	handlers["disconnect"] = func(client connection.Client, data string) {
@@ -98,4 +102,13 @@ func FindFieldByClientID(ID int) battlefield.BattleField {
 		}
 	}
 	return b
+}
+
+func Roll(id, enemyId int) int {
+	rand.Seed(time.Now().UnixNano())
+	player := rand.Intn(2)
+	if player == 0 {
+		return id
+	}
+	return enemyId
 }
