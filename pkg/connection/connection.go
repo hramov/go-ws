@@ -24,6 +24,7 @@ type Client struct {
 	Socket  net.Conn
 	From    chan string
 	To      chan string
+	Turn    bool
 }
 
 func Execute(protocol, ip, port string) *Server {
@@ -37,7 +38,7 @@ func (s *Server) createServer() { // +
 	fmt.Println("Server is listening for connections on " + s.Ip + ":" + s.Port)
 }
 
-func (s *Server) Listen(client Client) {
+func (s *Server) Listen(client *Client) {
 	for {
 		rawData, err := bufio.NewReader(client.Socket).ReadString('\n')
 		if err != nil && err.Error() == "EOF" {
@@ -50,7 +51,7 @@ func (s *Server) Listen(client Client) {
 	}
 }
 
-func (s *Server) On(client Client, handlers *map[string]func(client Client, data string)) {
+func (s *Server) On(client *Client, handlers *(map[string]func(client *Client, data string))) {
 	for {
 		time.Sleep(time.Second / 100)
 		rawData := <-client.From
@@ -63,7 +64,7 @@ func (s *Server) On(client Client, handlers *map[string]func(client Client, data
 	}
 }
 
-func (s *Server) Speak(client Client) {
+func (s *Server) Speak(client *Client) {
 	for {
 		rawData := <-client.To
 		event, data := utils.Split(rawData, "|")
