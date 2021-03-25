@@ -22,47 +22,49 @@ var turn bool = false
 func main() {
 
 	s := connection.Execute("tcp", "127.0.0.1", "5000")
-
 	handlers := make(map[string]func(client *connection.Client, data string))
 
 	handlers["connect"] = func(client *connection.Client, data string) {
-		s.Emit(*client, "connect", "")
-		s.Emit(*client, "whoami", strconv.Itoa((*client).ID))
-	}
+		s.Emit(client, "connect", "")
+		s.Emit(client, "whoami", strconv.Itoa((*client).ID))
 
-	handlers["sendName"] = func(client *connection.Client, data string) {
-		s.Emit(*client, "enemy", "2")
-
-		client.EnemyID = 2
-
-		s.Emit(*client, "drawField", "")
-		s.Emit(*client, "placeShip", "")
+		if len(clients)%2 == 0 {
+			utils.Log("Start game")
+			for id, _ := range clients {
+				(*client).Turn = turn
+				if id != client.ID {
+					(*client).EnemyID = id
+				}
+				turn = !turn
+			}
+			s.BroadCast(&clients, "drawField", "")
+			s.BroadCast(&clients, "placeShip", "")
+		}
 	}
 
 	handlers["sendShip"] = func(client *connection.Client, data string) {
 		sh := ship.Ship{}
-		sh.Player = client.ID
+		sh.Player = (*client).ID
 
 		json.Unmarshal([]byte(data), &sh)
-		b := FindFieldByClientID(client.ID)
+		b := FindFieldByClientID((*client).ID)
 		ships := FindShipsByClientID(sh.Player)
 		err := b.CheckShip(sh, &ships)
 		if err != nil {
-			s.Emit(*client, "wrongShip", err.Error())
-			s.Emit(*client, "placeShip", err.Error())
+			s.Emit(client, "wrongShip", err.Error())
+			s.Emit(client, "placeShip", err.Error())
 		} else {
 			b.CreateShip(sh)
-			battlefields[client.ID] = b
+			battlefields[(*client).ID] = b
 			ships[sh.Player] = sh
-			s.Emit(*client, "rightShip", "Ваш корабль успешно добавлен! Осталось: "+strconv.Itoa(10-len(ships)))
+			s.Emit(client, "rightShip", "Ваш корабль успешно добавлен! Осталось: "+strconv.Itoa(10-len(ships)))
 			shipData, _ := json.Marshal(b)
-			s.Emit(*client, "drawField", string(shipData))
+			s.Emit(client, "drawField", string(shipData))
+
 			if len(ships) < 1 {
-				s.Emit(*client, "placeShip", "")
+				s.Emit(client, "placeShip", "")
 			} else {
-				//TODO
-				Roll(client)
-				s.Emit(*client, "makeShot", strconv.FormatBool((*client).Turn))
+				s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
 			}
 		}
 	}
@@ -74,18 +76,25 @@ func main() {
 		b := FindFieldByClientID(client.EnemyID)
 		if err := b.CheckShot(&newShot); err != nil {
 			utils.Log(err.Error())
-			s.Emit(*client, "wrongShot", err.Error())
-			s.Emit(*client, "makeShot", strconv.FormatBool((*client).Turn))
+			s.Emit(client, "wrongShot", err.Error())
+			s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
 		}
 		shots[client.ID] = newShot
 		shotData, _ := json.Marshal(newShot)
+
 		if err := newShot.CheckHit(&clientShips); err != nil {
-			s.Emit(*client, "hit", string(shotData))
+			s.Emit(client, "hit", string(shotData))
 		} else {
-			s.Emit(*client, "missed", string(shotData))
+			s.Emit(client, "missed", string(shotData))
 		}
+
 		(*client).Turn = !(*client).Turn
-		s.Emit(*client, "makeShot", strconv.FormatBool((*client).Turn))
+		s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
+
+		enemy := FindClientByID(client.EnemyID)
+		b = FindFieldByClientID(enemy.EnemyID)
+		(*enemy).Turn = !(*enemy).Turn
+		s.Emit(enemy, "makeShot", strconv.FormatBool((*enemy).Turn))
 	}
 
 	handlers["disconnect"] = func(client *connection.Client, data string) {
@@ -138,6 +147,15 @@ func FindShipsByClientID(ID int) map[int]ship.Ship {
 		}
 	}
 	return clientShips
+}
+
+func FindClientByID(ID int) *connection.Client {
+	for id, cl := range clients {
+		if id == ID {
+			return &cl
+		}
+	}
+	return nil
 }
 
 func Roll(client *connection.Client) {

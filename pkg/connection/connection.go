@@ -72,7 +72,14 @@ func (s *Server) Speak(client *Client) {
 	}
 }
 
-func (s *Server) Emit(client Client, event, data string) {
+func (s *Server) Emit(client *Client, event, data string) {
 	time.Sleep(time.Second / 100)
 	client.To <- string(event + "|" + data)
+}
+
+func (s *Server) BroadCast(clients *(map[int]Client), event, data string) {
+	for _, client := range *clients {
+		time.Sleep(time.Second / 100)
+		client.To <- string(event + "|" + data)
+	}
 }
