@@ -11,26 +11,28 @@ type Shot struct {
 	Y int
 }
 
-func (s *Shot) CheckHit(ships *map[int]ship.Ship) error {
+func (s *Shot) CheckHit(ships *[]ship.Ship) error {
 	x, y := 0, 0
-	for _, sh := range *ships {
+	for id, sh := range *ships {
 		if sh.LivePoints > 0 {
 			x = sh.StartX
 			y = sh.StartY
 			for i := 0; i < sh.Length; i++ {
+				fmt.Println(i)
 				if sh.Direction == 0 {
-					if s.X == x && s.Y == y {
+					if s.X == x && s.Y == y+i {
+						sh.LivePoints--
 						return fmt.Errorf("Попал!")
 					}
-					x++
 				} else if sh.Direction == 1 {
-					if s.X == x && s.Y == y {
+					if s.X == x+i && s.Y == y {
+						sh.LivePoints--
 						return fmt.Errorf("Попал!")
 					}
-					y++
 				}
 			}
 		}
+		(*ships)[id] = sh
 	}
 	return nil
 }

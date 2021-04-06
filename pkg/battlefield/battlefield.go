@@ -42,7 +42,7 @@ func (b *BattleField) CreateField() {
 	}
 }
 
-func (b *BattleField) CheckShip(s ship.Ship, ships *map[int]ship.Ship) error {
+func (b *BattleField) CheckShip(s ship.Ship, ships *[]ship.Ship) error {
 	errorMessage := ""
 
 	//Проверка на количество кораблей определенной длины
@@ -106,7 +106,7 @@ func (b *BattleField) CreateShip(s ship.Ship) error {
 	return nil
 }
 
-func CheckQuantity(s ship.Ship, ships *map[int]ship.Ship) error {
+func CheckQuantity(s ship.Ship, ships *[]ship.Ship) error {
 	count := [4]int{4, 3, 2, 1}
 	for _, sh := range *ships {
 		switch sh.Length {
@@ -169,53 +169,35 @@ func (b *BattleField) CheckShot(newShot *shot.Shot) error {
 	if b.Field[newShot.X][newShot.Y] == "O" || b.Field[newShot.X][newShot.Y] == "_" {
 		return nil
 	}
-	// return fmt.Errorf("%s", "Сюда нельзя стрелять")
-	return nil
+	return fmt.Errorf("%s", "Сюда нельзя стрелять")
 }
 
-// func (b BattleField) CheckHit(Player bool, shot ship.Shot, ships *[]ship.Ship) bool {
+func (b BattleField) CheckHit(newShot *shot.Shot, ships *[]ship.Ship) bool {
+	var liveShips []ship.Ship
+	var result bool = false
 
-// 	var result bool = false
+	for i := 0; i < len(*ships); i++ {
 
-// 	var newShips, myShips, enemyShips []ship.Ship
+		for j := 0; j < (*ships)[i].Length; j++ {
+			if (*ships)[i].Direction == 0 {
+				if newShot.X == (*ships)[i].StartX && newShot.Y == (*ships)[i].StartY+j {
+					(*ships)[i].LivePoints--
+					result = true
+				}
+			} else {
+				if newShot.X == (*ships)[i].StartX+j && newShot.Y == (*ships)[i].StartY {
+					(*ships)[i].LivePoints--
+					result = true
+				}
+			}
+		}
 
-// 	newShips = *ships
+		if (*ships)[i].LivePoints > 0 {
+			liveShips = append(liveShips, (*ships)[i])
+		}
 
-// 	for i := 0; i < len(newShips); i++ {
-// 		if newShips[i].Player == !Player {
-// 			enemyShips = append(enemyShips, newShips[i])
-// 		} else {
-// 			myShips = append(myShips, newShips[i])
-// 		}
-// 	}
+	}
 
-// 	for i := 0; i < len(enemyShips); i++ {
-
-// 		for j := 0; j < enemyShips[i].Length; j++ {
-// 			if enemyShips[i].Direction == 0 {
-// 				if shot.X == enemyShips[i].StartX && shot.Y == enemyShips[i].StartY+j {
-// 					enemyShips[i].LivePoints--
-// 					result = true
-// 				}
-// 			} else {
-// 				if shot.X == enemyShips[i].StartX+j && shot.Y == enemyShips[i].StartY {
-// 					enemyShips[i].LivePoints--
-// 					result = true
-// 				}
-// 			}
-// 		}
-
-// 		if enemyShips[i].LivePoints > 0 {
-// 			myShips = append(myShips, enemyShips[i])
-// 			fmt.Println(myShips)
-// 		}
-
-// 	}
-
-// 	*ships = myShips
-// 	return result
-// }
-
-// func whosTurn(s ship.Ship) bool {
-
-// }
+	*ships = liveShips
+	return result
+}

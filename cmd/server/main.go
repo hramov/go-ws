@@ -13,7 +13,7 @@ import (
 	"github.com/hramov/battleship_server/pkg/utils"
 )
 
-var ships = make(map[int]ship.Ship)
+var ships []ship.Ship
 var clients = make(map[int]connection.Client)
 var battlefields = make(map[int]battlefield.BattleField)
 var shots = make(map[int]shot.Shot)
@@ -56,20 +56,20 @@ func main() {
 
 		json.Unmarshal([]byte(data), &sh)
 		b := FindFieldByClientID((*client).ID)
-		ships := FindShipsByClientID(sh.Player)
-		err := b.CheckShip(sh, &ships)
+		clientShips := FindShipsByClientID(client.ID)
+		err := b.CheckShip(sh, &clientShips)
 		if err != nil {
 			s.Emit(client, "wrongShip", err.Error())
 			s.Emit(client, "placeShip", err.Error())
 		} else {
 			b.CreateShip(sh)
 			battlefields[(*client).ID] = b
-			ships[sh.Player] = sh
-			s.Emit(client, "rightShip", "Ваш корабль успешно добавлен! Осталось: "+strconv.Itoa(10-len(ships)))
+			ships = append(ships, sh)
+			s.Emit(client, "rightShip", "Ваш корабль успешно добавлен! Осталось: "+strconv.Itoa(10-len(FindShipsByClientID(client.ID))))
 			shipData, _ := json.Marshal(b)
 			s.Emit(client, "drawField", string(shipData))
 
-			if len(ships) < 1 {
+			if len(FindShipsByClientID(client.ID)) < 1 {
 				s.Emit(client, "placeShip", "")
 			} else {
 				s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
@@ -78,18 +78,20 @@ func main() {
 	}
 
 	handlers["shot"] = func(client *connection.Client, data string) {
-		client = FindClientByID((*client).ID)
+		client = FindClientByID(client.ID)
 		enemy := FindClientByID(client.EnemyID)
 
-		evemyShips := FindShipsByClientID((*client).EnemyID)
+		evemyShips := FindShipsByClientID(enemy.ID)
+
 		newShot := shot.Shot{}
 		json.Unmarshal([]byte(data), &newShot)
-		b := FindFieldByClientID((*client).EnemyID)
 
+		b := FindFieldByClientID(enemy.ID)
 		if err := b.CheckShot(&newShot); err != nil {
 			utils.Log(err.Error())
 			s.Emit(client, "wrongShot", err.Error())
-			s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
+			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
+			return
 		}
 
 		shots[client.ID] = newShot
@@ -97,18 +99,17 @@ func main() {
 
 		if err := newShot.CheckHit(&evemyShips); err != nil {
 			s.Emit(client, "hit", string(shotData))
+			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
+			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
 		} else {
 			s.Emit(client, "missed", string(shotData))
+			client.Turn = !client.Turn
+			enemy.Turn = !enemy.Turn
+			clients[client.ID] = *client
+			clients[client.EnemyID] = *enemy
+			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
+			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
 		}
-
-		(*client).Turn = !(*client).Turn
-		(*enemy).Turn = !(*enemy).Turn
-
-		clients[client.ID] = *client
-		clients[client.EnemyID] = *enemy
-
-		s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
-		s.Emit(enemy, "makeShot", strconv.FormatBool((*enemy).Turn))
 	}
 
 	handlers["disconnect"] = func(client *connection.Client, data string) {
@@ -120,15 +121,15 @@ func main() {
 		utils.Log("Users remain: " + strconv.Itoa(len(clients)))
 	}
 
-	maintainConnections(s, &clients, &handlers)
+	maintainConnections(s, &handlers)
 }
 
-func maintainConnections(s *connection.Server, clients *map[int]connection.Client, handlers *(map[string]func(client *connection.Client, data string))) {
+func maintainConnections(s *connection.Server, handlers *(map[string]func(client *connection.Client, data string))) {
 	for {
 		conn, _ := s.Ln.Accept()
-		ID := len(*clients) + 1
+		ID := len(clients) + 1
 		client := connection.Client{ID, 0, conn, make(chan string), make(chan string), false}
-		(*clients)[ID] = client
+		clients[ID] = client
 
 		utils.Log("User " + strconv.Itoa(client.ID) + " connected!")
 
@@ -154,23 +155,21 @@ func FindFieldByClientID(ID int) battlefield.BattleField {
 	return b
 }
 
-func FindShipsByClientID(ID int) map[int]ship.Ship {
-	clientShips := make(map[int]ship.Ship)
-	for id, ship := range ships {
-		if id == ID {
-			clientShips[id] = ship
+func FindShipsByClientID(ID int) []ship.Ship {
+	var clientShips []ship.Ship
+
+	for _, sh := range ships {
+		if sh.Player == ID {
+			clientShips = append(clientShips, sh)
 		}
 	}
+
 	return clientShips
 }
 
 func FindClientByID(ID int) *connection.Client {
-	for id, cl := range clients {
-		if id == ID {
-			return &cl
-		}
-	}
-	return nil
+	cl := clients[ID]
+	return &cl
 }
 
 func Roll() {
