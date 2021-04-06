@@ -166,10 +166,11 @@ func GetShipsByID(id int, ships *[]ship.Ship) []ship.Ship {
 // }
 
 func (b *BattleField) CheckShot(newShot *shot.Shot) error {
-	if b.Field[newShot.X][newShot.Y] == "O" || b.Field[newShot.X][newShot.Y] == "*" {
+	if b.Field[newShot.X][newShot.Y] == "O" || b.Field[newShot.X][newShot.Y] == "_" {
 		return nil
 	}
-	return fmt.Errorf("%s", "Сюда нельзя стрелять")
+	// return fmt.Errorf("%s", "Сюда нельзя стрелять")
+	return nil
 }
 
 // func (b BattleField) CheckHit(Player bool, shot ship.Shot, ships *[]ship.Ship) bool {

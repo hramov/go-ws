@@ -28,21 +28,29 @@ func main() {
 		s.Emit(client, "connect", "")
 		s.Emit(client, "whoami", strconv.Itoa((*client).ID))
 
-		if len(clients)%2 == 0 {
+		if len(clients)%2 == 0 { // Есть пара соперников
 			utils.Log("Start game")
-			for id, _ := range clients {
-				(*client).Turn = turn
-				if id != client.ID {
-					(*client).EnemyID = id
+			Roll()                       // Задаем случайное значение переменной turn
+			for _, cl := range clients { // Перебираем всех игроков
+				cl.Turn = turn // Назначаем полю Turn клиента значение переменной turn
+				for i := 1; i <= len(clients); i++ {
+					if i != cl.ID { // Если это не текущий клиент
+						cl.EnemyID = i // назначаем ID оппонента
+					}
 				}
-				turn = !turn
+				clients[cl.ID] = cl
+				turn = !turn // Переключаем переменную turn
+				uData, _ := json.Marshal(cl)
+				s.Emit(&cl, "update", string(uData))
 			}
+
 			s.BroadCast(&clients, "drawField", "")
 			s.BroadCast(&clients, "placeShip", "")
 		}
 	}
 
 	handlers["sendShip"] = func(client *connection.Client, data string) {
+		client = FindClientByID((*client).ID)
 		sh := ship.Ship{}
 		sh.Player = (*client).ID
 
@@ -70,34 +78,41 @@ func main() {
 	}
 
 	handlers["shot"] = func(client *connection.Client, data string) {
-		clientShips := FindShipsByClientID(client.EnemyID)
+		client = FindClientByID((*client).ID)
+		enemy := FindClientByID(client.EnemyID)
+
+		evemyShips := FindShipsByClientID((*client).EnemyID)
 		newShot := shot.Shot{}
 		json.Unmarshal([]byte(data), &newShot)
-		b := FindFieldByClientID(client.EnemyID)
+		b := FindFieldByClientID((*client).EnemyID)
+
 		if err := b.CheckShot(&newShot); err != nil {
 			utils.Log(err.Error())
 			s.Emit(client, "wrongShot", err.Error())
 			s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
 		}
+
 		shots[client.ID] = newShot
 		shotData, _ := json.Marshal(newShot)
 
-		if err := newShot.CheckHit(&clientShips); err != nil {
+		if err := newShot.CheckHit(&evemyShips); err != nil {
 			s.Emit(client, "hit", string(shotData))
 		} else {
 			s.Emit(client, "missed", string(shotData))
 		}
 
 		(*client).Turn = !(*client).Turn
-		s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
-
-		enemy := FindClientByID(client.EnemyID)
-		b = FindFieldByClientID(enemy.EnemyID)
 		(*enemy).Turn = !(*enemy).Turn
+
+		clients[client.ID] = *client
+		clients[client.EnemyID] = *enemy
+
+		s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
 		s.Emit(enemy, "makeShot", strconv.FormatBool((*enemy).Turn))
 	}
 
 	handlers["disconnect"] = func(client *connection.Client, data string) {
+		client = FindClientByID((*client).ID)
 		utils.Log("User: " + strconv.Itoa(client.ID) + " disconnected!")
 		client.Socket.Close()
 		delete(clients, client.ID)
@@ -158,13 +173,12 @@ func FindClientByID(ID int) *connection.Client {
 	return nil
 }
 
-func Roll(client *connection.Client) {
+func Roll() {
 	rand.Seed(time.Now().UnixNano())
 	player := rand.Intn(2)
 	if player == 0 {
-		client.Turn = true
+		turn = true
 	} else {
-		client.Turn = false
+		turn = false
 	}
-
 }
