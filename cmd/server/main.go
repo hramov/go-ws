@@ -53,7 +53,7 @@ func main() {
 		client = FindClientByID((*client).ID)
 		sh := ship.Ship{}
 		sh.Player = (*client).ID
-
+		sh.ID = GetShipID()
 		json.Unmarshal([]byte(data), &sh)
 		b := FindFieldByClientID((*client).ID)
 		clientShips := FindShipsByClientID(client.ID)
@@ -78,10 +78,10 @@ func main() {
 	}
 
 	handlers["shot"] = func(client *connection.Client, data string) {
+
 		client = FindClientByID(client.ID)
 		enemy := FindClientByID(client.EnemyID)
-
-		evemyShips := FindShipsByClientID(enemy.ID)
+		enemyShips := FindShipsByClientID(enemy.ID)
 
 		newShot := shot.Shot{}
 		json.Unmarshal([]byte(data), &newShot)
@@ -97,16 +97,39 @@ func main() {
 		shots[client.ID] = newShot
 		shotData, _ := json.Marshal(newShot)
 
-		if err := newShot.CheckHit(&evemyShips); err != nil {
+		clientB := FindFieldByClientID(client.ID)
+		enemyB := FindFieldByClientID(enemy.ID)
+
+		if shipID, err := newShot.CheckHit(&enemyShips); err != nil {
+
+			clientB.CreateShot(true, true, newShot)
+			enemyB.CreateShot(false, true, newShot)
+
+			UpdateShip(shipID)
 			s.Emit(client, "hit", string(shotData))
+			s.Emit(enemy, "hitted", string(shotData))
 			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
 			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
 		} else {
 			s.Emit(client, "missed", string(shotData))
+
+			clientB.CreateShot(true, false, newShot)
+			clientData, _ := json.Marshal(clientB)
+
+			enemyB.CreateShot(false, false, newShot)
+			enemyData, _ := json.Marshal(enemyB)
+
+			battlefields[client.ID] = clientB
+			battlefields[enemy.ID] = enemyB
+
+			s.Emit(client, "updateField", string(clientData))
+			s.Emit(enemy, "updateField", string(enemyData))
+
 			client.Turn = !client.Turn
 			enemy.Turn = !enemy.Turn
 			clients[client.ID] = *client
 			clients[client.EnemyID] = *enemy
+
 			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
 			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
 		}
@@ -180,4 +203,27 @@ func Roll() {
 	} else {
 		turn = false
 	}
+}
+
+func GetShipID() int {
+	return len(ships) + 1
+}
+
+func FindShip(shipID int) (int, ship.Ship) {
+	var target ship.Ship
+	var targetID int
+	for id, sh := range ships {
+		if id == shipID {
+			targetID = id
+			target = sh
+			break
+		}
+	}
+	return targetID, target
+}
+
+func UpdateShip(shipID int) {
+	id, target := FindShip(shipID)
+	target.LivePoints--
+	ships[id] = target
 }

@@ -141,6 +141,23 @@ func GetShipsByID(id int, ships *[]ship.Ship) []ship.Ship {
 	return playerShips
 }
 
+func (b *BattleField) CreateShot(player bool, hit bool, sh shot.Shot) {
+	if player {
+		if hit {
+			b.ShotField[sh.X][sh.Y] = "X"
+		} else {
+			b.ShotField[sh.X][sh.Y] = "*"
+		}
+		return
+	} else {
+		if hit {
+			b.Field[sh.X][sh.Y] = "X"
+		} else {
+			b.Field[sh.X][sh.Y] = "*"
+		}
+	}
+}
+
 // func (b BattleField) DrawShot(Player bool, ShotX, ShotY int, Result int) BattleField {
 // 	if Player {
 // 		if Result == 0 {
