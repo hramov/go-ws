@@ -15,6 +15,8 @@ import (
 	"github.com/hramov/battleship_server/pkg/utils"
 )
 
+const SHIPS_LENGTH = 10
+
 var ships []ship.Ship
 var clients = make(map[int]connection.Client)
 var battlefields = make(map[int]battlefield.BattleField)
@@ -76,7 +78,7 @@ func main() {
 			shipData, _ := json.Marshal(b)
 			s.Emit(client, "drawField", string(shipData))
 
-			if len(FindShipsByClientID(client.ID)) < 1 {
+			if len(FindShipsByClientID(client.ID)) < SHIPS_LENGTH {
 				s.Emit(client, "placeShip", "")
 			} else {
 				s.Emit(client, "makeShot", strconv.FormatBool((*client).Turn))
