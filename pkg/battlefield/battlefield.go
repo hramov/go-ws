@@ -148,7 +148,6 @@ func (b *BattleField) CreateShot(player bool, hit bool, sh shot.Shot) {
 		} else {
 			b.ShotField[sh.X][sh.Y] = "*"
 		}
-		return
 	} else {
 		if hit {
 			b.Field[sh.X][sh.Y] = "X"

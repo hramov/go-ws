@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"time"
 
@@ -27,6 +29,10 @@ func main() {
 	handlers["connect"] = func(client *connection.Client, data string) {
 		s.Emit(client, "connect", "")
 		s.Emit(client, "whoami", strconv.Itoa((*client).ID))
+
+		if len(clients) < 2 {
+			clients[(*client).ID] = *client
+		}
 
 		if len(clients)%2 == 0 { // Есть пара соперников
 			utils.Log("Start game")
@@ -59,6 +65,7 @@ func main() {
 		clientShips := FindShipsByClientID(client.ID)
 		err := b.CheckShip(sh, &clientShips)
 		if err != nil {
+			fmt.Println(err)
 			s.Emit(client, "wrongShip", err.Error())
 			s.Emit(client, "placeShip", err.Error())
 		} else {
@@ -81,57 +88,75 @@ func main() {
 
 		client = FindClientByID(client.ID)
 		enemy := FindClientByID(client.EnemyID)
+
 		enemyShips := FindShipsByClientID(enemy.ID)
 
 		newShot := shot.Shot{}
 		json.Unmarshal([]byte(data), &newShot)
 
 		b := FindFieldByClientID(enemy.ID)
+
 		if err := b.CheckShot(&newShot); err != nil {
 			utils.Log(err.Error())
-			s.Emit(client, "wrongShot", err.Error())
 			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
 			return
 		}
 
 		shots[client.ID] = newShot
-		shotData, _ := json.Marshal(newShot)
 
 		clientB := FindFieldByClientID(client.ID)
 		enemyB := FindFieldByClientID(enemy.ID)
 
-		if shipID, err := newShot.CheckHit(&enemyShips); err != nil {
+		shipID, err := newShot.CheckHit(&enemyShips)
+
+		if err != nil {
 
 			clientB.CreateShot(true, true, newShot)
 			enemyB.CreateShot(false, true, newShot)
 
-			UpdateShip(shipID)
-			s.Emit(client, "hit", string(shotData))
-			s.Emit(enemy, "hitted", string(shotData))
+			battlefields[client.ID] = clientB
+			battlefields[enemy.ID] = enemyB
+
+			if playerID, isLose := UpdateShip(shipID); isLose {
+				fmt.Printf("%d %s\n", playerID, "програл!")
+				// s.BroadCast(&clients, "restart", "")
+				// Restart()
+				os.Exit(0)
+				return
+			}
+
+			clientData, _ := json.Marshal(clientB)
+			enemyData, _ := json.Marshal(enemyB)
+
+			s.Emit(client, "updateField", string(clientData))
+			s.Emit(enemy, "updateField", string(enemyData))
+
 			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
 			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
+
 		} else {
-			s.Emit(client, "missed", string(shotData))
 
 			clientB.CreateShot(true, false, newShot)
-			clientData, _ := json.Marshal(clientB)
-
 			enemyB.CreateShot(false, false, newShot)
+
+			clientData, _ := json.Marshal(clientB)
 			enemyData, _ := json.Marshal(enemyB)
 
 			battlefields[client.ID] = clientB
 			battlefields[enemy.ID] = enemyB
 
-			s.Emit(client, "updateField", string(clientData))
-			s.Emit(enemy, "updateField", string(enemyData))
-
 			client.Turn = !client.Turn
 			enemy.Turn = !enemy.Turn
+
 			clients[client.ID] = *client
 			clients[client.EnemyID] = *enemy
 
+			s.Emit(client, "updateField", string(clientData))
+			s.Emit(enemy, "updateField", string(enemyData))
+
 			s.Emit(enemy, "makeShot", strconv.FormatBool(enemy.Turn))
 			s.Emit(client, "makeShot", strconv.FormatBool(client.Turn))
+
 		}
 	}
 
@@ -180,13 +205,11 @@ func FindFieldByClientID(ID int) battlefield.BattleField {
 
 func FindShipsByClientID(ID int) []ship.Ship {
 	var clientShips []ship.Ship
-
 	for _, sh := range ships {
 		if sh.Player == ID {
 			clientShips = append(clientShips, sh)
 		}
 	}
-
 	return clientShips
 }
 
@@ -209,21 +232,57 @@ func GetShipID() int {
 	return len(ships) + 1
 }
 
-func FindShip(shipID int) (int, ship.Ship) {
+func FindShip(shipID int) (int, int, ship.Ship) {
 	var target ship.Ship
 	var targetID int
+	var playerID int
+
 	for id, sh := range ships {
-		if id == shipID {
+		if sh.ID == shipID {
 			targetID = id
+			playerID = sh.Player
 			target = sh
 			break
 		}
 	}
-	return targetID, target
+	return targetID, playerID, target
 }
 
-func UpdateShip(shipID int) {
-	id, target := FindShip(shipID)
+func UpdateShip(shipID int) (int, bool) {
+
+	var updatedShips []ship.Ship
+
+	id, playerID, target := FindShip(shipID)
+
 	target.LivePoints--
 	ships[id] = target
+
+	for _, sh := range ships {
+		if sh.LivePoints > 0 {
+			updatedShips = append(updatedShips, sh)
+		}
+	}
+
+	ships = updatedShips
+
+	if lose := CheckLose(playerID); lose {
+		return playerID, true
+	}
+	return playerID, false
+}
+
+func CheckLose(playerID int) bool {
+	clientShips := FindShipsByClientID(playerID)
+	if len(clientShips) == 0 {
+		return true
+	}
+	return false
+}
+
+func Restart() {
+	ships = make([]ship.Ship, 0)
+	clients = make(map[int]connection.Client)
+	battlefields = make(map[int]battlefield.BattleField)
+	shots = make(map[int]shot.Shot)
+	turn = false
 }
