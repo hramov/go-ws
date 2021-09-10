@@ -1,4 +1,4 @@
-package connection
+package ws
 
 import (
 	"bufio"
@@ -7,8 +7,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-
-	"github.com/hramov/battleship_server/pkg/utils"
 )
 
 type Server struct {
@@ -16,21 +14,6 @@ type Server struct {
 	Ip       string
 	Port     string
 	Ln       net.Listener
-}
-
-type Client struct {
-	ID      int
-	EnemyID int
-	Socket  net.Conn
-	From    chan string
-	To      chan string
-	Turn    bool
-}
-
-func Execute(protocol, ip, port string) *Server {
-	server := Server{protocol, ip, port, nil}
-	server.createServer()
-	return &server
 }
 
 func (s *Server) createServer() { // +
@@ -51,11 +34,11 @@ func (s *Server) Listen(client *Client) {
 	}
 }
 
-func (s *Server) On(client *Client, handlers *(map[string]func(client *Client, data string))) {
+func (s *Server) On(client *Client, handlers *Handlers) {
 	for {
 		time.Sleep(time.Second / 100)
 		rawData := <-client.From
-		rawEvent, data := utils.Split(rawData, "|")
+		rawEvent, data := Split(rawData, "|")
 		for event, handler := range *handlers {
 			if event == rawEvent {
 				handler(client, data)
@@ -67,7 +50,7 @@ func (s *Server) On(client *Client, handlers *(map[string]func(client *Client, d
 func (s *Server) Speak(client *Client) {
 	for {
 		rawData := <-client.To
-		event, data := utils.Split(rawData, "|")
+		event, data := Split(rawData, "|")
 		client.Socket.Write([]byte(string(event) + "|" + string(data) + "\n"))
 	}
 }
@@ -77,7 +60,7 @@ func (s *Server) Emit(client *Client, event, data string) {
 	client.To <- string(event + "|" + data)
 }
 
-func (s *Server) BroadCast(clients *(map[int]Client), event, data string) {
+func (s *Server) BroadCast(clients *Clients, event, data string) {
 	for _, client := range *clients {
 		time.Sleep(time.Second / 100)
 		client.To <- string(event + "|" + data)

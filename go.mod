@@ -1,3 +1,3 @@
-module github.com/hramov/battleship_server
+module github.com/hramov/go-ws
 
 go 1.16
