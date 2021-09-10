@@ -1,4 +1,4 @@
-package ws
+package lib
 
 import (
 	"bufio"
@@ -9,19 +9,19 @@ import (
 	"time"
 )
 
-type Server struct {
-	Protocol string
-	Ip       string
-	Port     string
-	Ln       net.Listener
+type server struct {
+	protocol string
+	ip       string
+	port     string
+	ln       net.Listener
 }
 
-func (s *Server) createServer() { // +
-	s.Ln, _ = net.Listen(s.Protocol, s.Ip+":"+s.Port)
-	fmt.Println("Server is listening for connections on " + s.Ip + ":" + s.Port)
+func (s *server) createServer() { // +
+	s.ln, _ = net.Listen(s.protocol, s.ip+":"+s.port)
+	fmt.Println("Server is listening for connections on " + s.ip + ":" + s.port)
 }
 
-func (s *Server) Listen(client *Client) {
+func (s *server) listen(client *Client) {
 	for {
 		rawData, err := bufio.NewReader(client.Socket).ReadString('\n')
 		if err != nil && err.Error() == "EOF" {
@@ -34,7 +34,7 @@ func (s *Server) Listen(client *Client) {
 	}
 }
 
-func (s *Server) On(client *Client, handlers *Handlers) {
+func (s *server) on(client *Client, handlers *handlers) {
 	for {
 		time.Sleep(time.Second / 100)
 		rawData := <-client.From
@@ -47,7 +47,7 @@ func (s *Server) On(client *Client, handlers *Handlers) {
 	}
 }
 
-func (s *Server) Speak(client *Client) {
+func (s *server) speak(client *Client) {
 	for {
 		rawData := <-client.To
 		event, data := Split(rawData, "|")
@@ -55,12 +55,12 @@ func (s *Server) Speak(client *Client) {
 	}
 }
 
-func (s *Server) Emit(client *Client, event, data string) {
+func (s *server) emit(client *Client, event, data string) {
 	time.Sleep(time.Second / 100)
 	client.To <- string(event + "|" + data)
 }
 
-func (s *Server) BroadCast(clients *Clients, event, data string) {
+func (s *server) broadCast(clients *clients, event, data string) {
 	for _, client := range *clients {
 		time.Sleep(time.Second / 100)
 		client.To <- string(event + "|" + data)

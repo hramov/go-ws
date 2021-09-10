@@ -1,20 +1,14 @@
 package main
 
 import (
-	"github.com/hramov/go-ws/ws"
+	gows "github.com/hramov/go-ws/lib"
 )
 
 func main() {
+	s := gows.Execute("tcp", "127.0.0.1", "5000")
 
-	s := ws.Execute("tcp", "127.0.0.1", "5000")
+	gows.HandlersMap["connect"] = func(client *gows.Client, data string) {}
+	gows.HandlersMap["disconnect"] = func(client *gows.Client, data string) {}
 
-	handlers := make(ws.Handlers)
-
-	handlers["connect"] = func(client *ws.Client, data string) {
-	}
-
-	handlers["disconnect"] = func(client *ws.Client, data string) {
-	}
-
-	ws.Proceed(s, &handlers)
+	gows.Proceed(s)
 }
