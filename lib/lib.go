@@ -17,20 +17,24 @@ func init() {
 	HandlersMap = make(handlers)
 }
 
-func Execute(protocol, ip, port string) *server {
+func Execute(protocol, ip, port string) (*server, error) {
 	server := server{protocol, ip, port, nil}
-	server.createServer()
-	return &server
+	err := server.createServer()
+	if err != nil {
+		return nil, err
+	}
+	return &server, nil
 }
 
-func Proceed(s *server) {
+func Proceed(s *server) error {
 	for {
-
-		conn, _ := s.ln.Accept()
+		conn, err := s.ln.Accept()
+		if err != nil {
+			return err
+		}
 		ID := len(clientsMap) + 1
 		client := Client{ID, 0, conn, make(chan string), make(chan string), false}
 		clientsMap[ID] = client
-
 		Log("User " + strconv.Itoa(client.ID) + " connected!")
 
 		go s.speak(&client)
@@ -38,6 +42,5 @@ func Proceed(s *server) {
 		go s.on(&client, &HandlersMap)
 
 		client.From <- "connect|" + strconv.Itoa(client.ID)
-
 	}
 }

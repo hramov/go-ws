@@ -16,9 +16,11 @@ type server struct {
 	ln       net.Listener
 }
 
-func (s *server) createServer() { // +
-	s.ln, _ = net.Listen(s.protocol, s.ip+":"+s.port)
+func (s *server) createServer() error { // +
+	var err error
+	s.ln, err = net.Listen(s.protocol, s.ip+":"+s.port)
 	fmt.Println("Server is listening for connections on " + s.ip + ":" + s.port)
+	return err
 }
 
 func (s *server) listen(client *Client) {
